@@ -1,22 +1,23 @@
 // api/_firebase.js
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+const admin = require('firebase-admin');
 
-export function getDb() {
-  if (!getApps().length) {
-    const {
-      FIREBASE_PROJECT_ID,
-      FIREBASE_CLIENT_EMAIL,
-      FIREBASE_PRIVATE_KEY,
-    } = process.env;
+if (!global._firebaseApp) {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-    initializeApp({
-      credential: cert({
-        projectId: FIREBASE_PROJECT_ID,
-        clientEmail: FIREBASE_CLIENT_EMAIL,
-        privateKey: FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
-    });
+  if (!projectId || !clientEmail || !privateKey) {
+    console.error('Missing FIREBASE_* envs');
+    throw new Error('Missing FIREBASE_* envs');
   }
-  return getFirestore();
+  // відновлюємо \n
+  if (privateKey.includes('\\n')) privateKey = privateKey.replace(/\\n/g, '\n');
+
+  admin.initializeApp({
+    credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+  });
+  global._firebaseApp = admin.app();
 }
+
+const db = admin.firestore();
+module.exports = { admin, db };
